@@ -1,0 +1,2 @@
+import shutil
+shutil.move(r"C:\\Users\\Hp\\Desktop\\softwares\\money\\lib\\main.dart", r"C:\\Users\\Hp\\Desktop")
