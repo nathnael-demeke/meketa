@@ -6,8 +6,7 @@
 #define true 1
 #include "cJSON/cJSON.h"
 
-void removechar( char str[], char t)
-{
+void removechar( char str[], char t) {
     int i,j;
     i = 0;
     while(i<strlen(str))
@@ -20,8 +19,7 @@ void removechar( char str[], char t)
     }
 }
 
-char* concat(const char *s1, const char *s2)
-{
+char* concat(const char *s1, const char *s2) {
     char *result = malloc(strlen(s1) + strlen(s2) + 1); 
     strcpy(result, s1);
     strcat(result, s2);
@@ -35,10 +33,16 @@ void sendSuccessMessage(int accept_socket) {
    send(accept_socket,response,strlen(response),0);
 
 }
-void filepath_parser(char string[]) {
+char* filepath_parser(char string[]) {
    int last_removed_index = 0;
-   char folders[100][100] = malloc(1000);
    int index = 0;
+   int backslashes = 0;
+   for (int i = 0; i < strlen(string); i++) {
+      if (string[i] == '\\' && last_removed_index < i) {
+         backslashes++;
+      }
+   }
+   char* full_string = malloc(sizeof(char*) * backslashes);
    for (int i = 0; i < strlen(string); i++) {
       if (string[i] == '\\' && last_removed_index < i) {
          // printf("i = %d last = %d \n", last_removed_index , i);
@@ -47,15 +51,16 @@ void filepath_parser(char string[]) {
          for (int j = last_removed_index; j <= i; j++) {
             folder[char_index] = string[j];
             char_index++;
-         
-         }         
-         folders[index] = folder;
+         }        
+         strcat(full_string,folder);
          last_removed_index = i + 2;
+         
       }
       
      index++;
    }
-   
+   return full_string;
+     
 }
 void main() {
    
@@ -107,15 +112,16 @@ void main() {
       
       removechar(driver_directory_string,'"');
       removechar(action_string, '"');
-      filepath_parser(driver_directory_string);
+      char* driver_folder_path = filepath_parser(driver_directory_string);
+      
       if (strcmp(action_string,"Approve") == 0) {
-         char* command = concat("copy R.file ", driver_directory_string);
+         char* command = concat("copy R.file ", driver_folder_path);
          system(command);
          sendSuccessMessage(acceptSocket);
       }
 
       else if (strcmp(action_string,"Disapprove") == 0) {
-         char* command1 = concat("del ", driver_directory_string);
+         char* command1 = concat("del ", driver_folder_path);
          char* command2 = concat(command1 , "\\R.file");
          system(command2);
          sendSuccessMessage(acceptSocket);
