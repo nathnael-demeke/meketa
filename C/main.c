@@ -6,7 +6,59 @@
 #define true 1
 #include "cJSON/cJSON.h"
 
+void removechar( char str[], char t)
+{
+    int i,j;
+    i = 0;
+    while(i<strlen(str))
+    {
+        if (str[i]==t) 
+        { 
+            for (j=i; j<strlen(str); j++)
+                str[j]=str[j+1];   
+        } else i++;
+    }
+}
+
+char* concat(const char *s1, const char *s2)
+{
+    char *result = malloc(strlen(s1) + strlen(s2) + 1); 
+    strcpy(result, s1);
+    strcat(result, s2);
+    return result;
+}
+void sendSuccessMessage(int accept_socket) {
+   cJSON *success_json = cJSON_CreateObject();
+   cJSON_AddStringToObject(success_json,"StatusCode", "200");
+   cJSON_AddStringToObject(success_json,"Msg","Approved flash drive");
+   char *response = cJSON_Print(success_json);
+   send(accept_socket,response,strlen(response),0);
+
+}
+void filepath_parser(char string[]) {
+   int last_removed_index = 0;
+   char folders[100][100] = malloc(1000);
+   int index = 0;
+   for (int i = 0; i < strlen(string); i++) {
+      if (string[i] == '\\' && last_removed_index < i) {
+         // printf("i = %d last = %d \n", last_removed_index , i);
+         char folder[100];
+         int char_index = 0;
+         for (int j = last_removed_index; j <= i; j++) {
+            folder[char_index] = string[j];
+            char_index++;
+         
+         }         
+         folders[index] = folder;
+         last_removed_index = i + 2;
+      }
+      
+     index++;
+   }
+   
+}
 void main() {
+   
    WSADATA wsaData;
    int wsaerr;
    WORD wVersionRequested = MAKEWORD(2, 2);
@@ -46,19 +98,31 @@ void main() {
       }
       char receiveBuffer[1024];
       recv(acceptSocket, receiveBuffer, 200, 0);
-
+      
       cJSON *request = cJSON_Parse(receiveBuffer);
       cJSON *action = cJSON_GetObjectItemCaseSensitive(request,"Action");
       cJSON *driverDirectory = cJSON_GetObjectItemCaseSensitive(request,"DriverDirectory");
       char *action_string = cJSON_Print(action);
       char *driver_directory_string = cJSON_Print(driverDirectory);
+      
+      removechar(driver_directory_string,'"');
+      removechar(action_string, '"');
+      filepath_parser(driver_directory_string);
+      if (strcmp(action_string,"Approve") == 0) {
+         char* command = concat("copy R.file ", driver_directory_string);
+         system(command);
+         sendSuccessMessage(acceptSocket);
+      }
 
-      if (strcmp(action_string,"Approve")) {
-         system("");
+      else if (strcmp(action_string,"Disapprove") == 0) {
+         char* command1 = concat("del ", driver_directory_string);
+         char* command2 = concat(command1 , "\\R.file");
+         system(command2);
+         sendSuccessMessage(acceptSocket);
       }
 
       else {
-         printf(action_string);
+         printf("action unrecognized %s",action_string);
       }
 
       closesocket(acceptSocket);
